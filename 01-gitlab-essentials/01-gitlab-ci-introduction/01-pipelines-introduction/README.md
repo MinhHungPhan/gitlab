@@ -193,6 +193,8 @@ The `grep` command checks if the mentioned string exists in the file. If any of 
 
 This is a simple way to define multiple jobs in GitLab CI, with each job representing a different stage of your development process.
 
+**Note**: Gitlab will automatically assign jobs to the "test" stage, even if no test was defined. By automatically assigning jobs to the "test" stage, GitLab encourages developers to incorporate testing practices into their pipelines. Even if no explicit tests are defined, this default behavior prompts developers to consider and include relevant tests as part of their workflow.
+
 ## Advanced Pipelining: Defining Stages and Order of Jobs
 
 With the basics of creating jobs in GitLab CI covered, let's delve into more advanced concepts. It is often necessary to define the sequence in which jobs are executed and group them into stages. This section walks you through these aspects.
