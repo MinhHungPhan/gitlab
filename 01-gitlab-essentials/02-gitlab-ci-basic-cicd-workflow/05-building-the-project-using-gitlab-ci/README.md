@@ -85,6 +85,16 @@ git commit -m "added pipeline"
 git push
 ```
 
+Expected output:
+
+```js
+$ npm install
+/usr/bin/bash: line 129: npm: command not found
+Cleaning up project directory and file based variables
+00:01
+ERROR: Job failed: exit code 1
+```
+
 ## Troubleshooting Errors
 
 ### npm: command not found
