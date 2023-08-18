@@ -7,6 +7,7 @@ Welcome to this detailed tutorial on enhancing your testing strategy, in this ca
 - [Introduction](#introduction)
 - [Optimizing GitLab CI/CD Pipelines](#optimizing-gitlab-cicd-pipelines)
 - [Creating Jobs in Parallel](#creating-jobs-in-parallel)
+- [Differences between test artifact and test website](#differences-between-test-artifact-and-test-website)
 - [Conclusion](#conclusion)
 - [References](#references)
 
@@ -129,6 +130,39 @@ In our case, we are creating two jobs: `test artifact` and `test website`. They 
 Running jobs in parallel is an excellent idea for optimizing processes, especially when the job execution is lengthy. However, it might not make the job run faster because of the overhead of downloading the Docker image. 
 
 Remember, not every job can be parallelized. If there are dependencies between jobs, parallelization is not possible.
+
+## Differences between test artifact and test website
+
+The provided GitLab pipeline code defines two jobs under the "test" stage: `test artifact` and `test website`. Let's understand the differences between them:
+
+1. **Base Image**:
+
+- **test artifact**: Uses the `alpine` image. This is a minimalistic lightweight Linux distribution, mostly used when a small footprint is required.
+- **test website**: Uses the `node` image, which is likely a Node.js environment. This is needed for running applications that depend on Node.js.
+
+2. **Purpose**:
+
+- **test artifact**: Checks if the built website (specifically, the `index.html` file) contains the word "Gatsby". It's a very basic validation to ensure that the built content (artifact) has specific content.
+- **test website**: Installs necessary packages, starts the Gatsby development server, and then uses `curl` to fetch the website's homepage from `localhost` on port `9000`. It then checks if the fetched content contains the word "Gatsby". This test validates that the website can be served and responds correctly.
+
+3. **Commands**:
+
+- **test artifact**: It simply uses the `grep` command to check for the existence of the word "Gatsby" in the `index.html` file. This is a straightforward check against the artifact.
+- **test website**: It installs dependencies, starts the website using Gatsby's serve command, and then checks the served website for the existence of the word "Gatsby" using a combination of `curl` and `grep`.
+
+4. **Interactions**:
+
+- **test artifact**: This job doesn't actively run the website. It only checks the static files that were generated in the build process.
+- **test website**: This job actively serves the website and tests it by accessing the website using `curl`.
+
+5. **Resource Intensity**:
+
+- **test artifact**: Typically less resource-intensive because it's merely checking static content without starting any server or application.
+- **test website**: More resource-intensive compared to `test artifact` because it's running a server, serving the website, and making an HTTP request.
+
+In summary:
+- `test artifact` is a simple validation to ensure that the built artifact (here, the `index.html` file) contains the word "Gatsby".
+- `test website` is a more involved test to ensure not only that the built website contains "Gatsby" but also that the site is served correctly using Gatsby's server.
 
 ## Conclusion
 
