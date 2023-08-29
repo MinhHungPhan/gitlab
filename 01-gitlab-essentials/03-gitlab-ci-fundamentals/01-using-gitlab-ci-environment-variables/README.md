@@ -144,7 +144,7 @@ test deployment:
   stage: deployment tests
   script:
     - apk add --no-cache curl   # Installing curl for making HTTP requests.
-    - curl -s "[YOUR_DOMAIN_NAME].surge.sh" | grep -q "$CI_COMMIT_SHORT_SHA"  # Verify if the commit hash is present in the website's content.
+    - curl -s "https://[YOUR_DOMAIN_NAME].surge.sh" | grep -q "$CI_COMMIT_SHORT_SHA"  # Verify if the commit hash is present in the website's content.
 ```
 
 **Note**: Ensure to replace `[YOUR_DOMAIN_NAME]` with the appropriate domain name of your deployed website.
