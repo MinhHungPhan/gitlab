@@ -100,6 +100,12 @@ production tests:
 
 In this configuration, the deployment to staging, deployment to production, and production tests will only be executed for the `main` branch.
 
+1. Start by pushing your new changes to GitLab.
+2. Navigate to GitLab and go to: Console > Code > Branches.
+3. Create a new branch from `main` and name it `feature/new-title`.
+4. Once the `feature/new-title` branch is created, the pipeline will automatically initiate.
+5. For this branch, the pipeline will be quicker because it only runs the Build and Test stages.
+
 ## Conclusion
 
 Employing a structured branching strategy and configuring your pipelines accordingly can significantly improve your Git workflow. This ensures that your `main` branch remains deployable and aligns with best practices for continuous deployment and delivery.
