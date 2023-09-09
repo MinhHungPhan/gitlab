@@ -67,8 +67,8 @@ cache:
     - node_modules/
 
 variables:
-  STAGING_DOMAIN: instazone-staging.surge.sh
-  PRODUCTION_DOMAIN: instazone.surge.sh
+  STAGING_DOMAIN: [YOUR_DOMAIN_NAME]-staging.surge.sh
+  PRODUCTION_DOMAIN: [YOUR_DOMAIN_NAME].surge.sh
 
 #... [rest of the pipeline details]
 
