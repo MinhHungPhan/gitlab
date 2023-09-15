@@ -34,21 +34,19 @@ Upon creating a new branch, the pipeline will immediately begin executing.
 2. Make the desired modifications. In this case, we're adding a new title.
 
 ```js
-<h1>
-        Welcome to <b>Gatsby!</b>
-      </h1>
-      <h2>This is a new title</h2>
-      <p className={styles.intro}>
-        <b>Example pages:</b>{" "}
-        {samplePageLinks.map((link, i) => (
-          <React.Fragment key={link.url}>
-            <Link to={link.url}>{link.text}</Link>
-            {i !== samplePageLinks.length - 1 && <> · </>}
-          </React.Fragment>
-        ))}
-        <br />
-        Edit <code>src/pages/index.js</code> to update this page.
-      </p>
+<h1>Welcome to <b>Gatsby!</b></h1>
+<h2>This is a new title</h2>
+<p className={styles.intro}>
+  <b>Example pages:</b> 
+  {samplePageLinks.map((link, i) => (
+    <React.Fragment key={link.url}>
+      <Link to={link.url}>{link.text}</Link>
+      {i !== samplePageLinks.length - 1 && <> · </>}
+    </React.Fragment>
+  ))}
+  <br />
+  Edit <code>src/pages/index.js</code> to update this page.
+</p>
 ```
 
 3. Once done, **Commit** your changes with an appropriate commit message.
