@@ -1,0 +1,78 @@
+image: node
+
+stages:
+  - build
+  - test
+  - deploy
+  - deployment tests
+  - cache
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+  policy: pull
+
+update cache:
+  stage: cache
+  script:
+    - npm install
+  cache:
+      key: ${CI_COMMIT_REF_SLUG}
+      paths:
+        - node_modules/
+      policy: push
+  only:
+    - schedules
+
+build website:
+  stage: build
+  script:
+    - echo $CI_COMMIT_SHORT_SHA
+    - npm install
+    - npm install -g gatsby-cli
+    - gatsby build
+    - sed -i "s/%%VERSION%%/$CI_COMMIT_SHORT_SHA/" ./public/index.html
+  artifacts:
+    paths:
+      - ./public
+  except:
+   - schedules
+
+test artifact:
+  image: alpine
+  stage: test
+  cache: {}
+  script:
+    - grep -q "Gatsby" ./public/index.html
+  except:
+   - schedules
+
+test website:
+  stage: test
+  script:
+    - npm install
+    - npm install -g gatsby-cli
+    - gatsby serve &
+    - sleep 3
+    - curl "http://localhost:9000" | tac | tac | grep -q "Gatsby"
+  except:
+   - schedules
+
+deploy to surge: 
+  stage: deploy
+  cache: {}
+  script:
+    - npm install --global surge
+    - surge --project ./public --domain [YOUR_DOMAIN_NAME].surge.sh
+  except:
+   - schedules
+
+test deployment:
+  image: alpine
+  stage: deployment tests
+  script:
+    - apk add --no-cache curl
+    - curl -s "https://[YOUR_DOMAIN_NAME].surge.sh" | grep -q "$CI_COMMIT_SHORT_SHA"
+  except:
+   - schedules
