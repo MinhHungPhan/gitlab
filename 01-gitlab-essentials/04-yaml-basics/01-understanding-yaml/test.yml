@@ -1,0 +1,15 @@
+# This is a comment
+person:
+  name: John
+  age: 29
+  isMale: true
+  stuff:
+    - laptop
+    - car
+    - bike
+  foods: [pizza, donuts, coke] 
+  friends:
+    - name: Lucy
+      age: 28
+    - name: Linh
+      age: 26
