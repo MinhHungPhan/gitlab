@@ -1,0 +1,20 @@
+base_person: &base
+  city: nyc
+  country: usa
+
+person:
+  <<: *base
+  name: &name John
+  age: 29
+  isMale: true
+  stuff:
+    - laptop
+    - car
+    - bike
+  foods: [pizza, donuts, coke] 
+  friends:
+    - name: Cyril
+      age: 35
+    - name: Eric
+      age: 27
+  self: *name
