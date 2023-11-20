@@ -39,13 +39,15 @@ Welcome to the Car Fleet Management Java project setup guide! This tutorial is d
 
 ## Running the Application
 
-1. **Starting the App**: In `IntelliJ`, navigate to 'tasks' > 'application' > 'bootRun'. This will start the application with all necessary dependencies.
+1. **Starting the App**: In `IntelliJ`, navigate to 'Gradle' > 'Tasks' > 'application' > 'bootRun'. This will start the application with all necessary dependencies.
 2. **Local Installation**: Installing and running the project locally is beneficial but not required for building the pipeline.
 
 ## Using Postman with the API
 
 1. **Understanding APIs**: The application exposes an API to interact with car data but doesn't have a GUI.
 2. **Using Postman**: Download Postman [here](https://www.postman.com/downloads/) for interacting with the API. It's a free tool for API testing.
+
+**Note**: `Gradle` is a powerful build automation tool that's used to manage the dependencies and build process of the project.
 
 ## Conclusion
 
