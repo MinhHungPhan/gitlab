@@ -1,0 +1,120 @@
+# Global variables
+variables:
+  SONAR_SCANNER_VERSION: 3.3.0.1492
+
+# Reusable scripts
+.provision: &provision
+  - 'which ssh-agent'
+  - 'eval $(ssh-agent -s)'
+  - 'echo "$SSH_ID_RSA" | tr -d "\r" | ssh-add - > /dev/null'
+  - 'mkdir -p ~/.ssh'
+  - 'chmod 700 ~/.ssh'
+
+.composer: &composer
+  - php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+  # Validating composer installer
+  - php -r "if (hash_file('sha384', 'composer-setup.php') === 'e0012edf3e80b6978849f5eff0d4b4e4c79ff1609dd1e613307e16318854d24ae64f26d17af3ef0bf7cfb710ca74755a') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+  - mkdir bin
+  - php composer-setup.php --filename=composer --install-dir=bin
+  - php -r "unlink('composer-setup.php');"
+  - 'bin/composer install --prefer-dist --no-interaction --ignore-platform-reqs'
+  - 'bin/composer dumpautoload --no-interaction'
+
+# Workflow rules
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_PROJECT_PATH == 'Accor/magento'
+
+# Define stages
+stages:
+  - test
+  - full-test
+
+# ---------------- Sonar Merge request analysis ----------------
+sonar-mr:
+  image:
+    name: newtmitch/sonar-scanner:3.2-alpine
+    entrypoint: ['']
+  stage: test
+  variables:
+    SONAR_ANALYSIS_MODE: 'preview'
+    SONAR_SCANNER_OPTS: '-Xmx2G'
+  tags:
+    - docker-accor
+  script:
+    - "sonar-scanner \
+        -Dsonar.host.url=https://sonar.pp.cicd.aws.smile.fr \
+        -Dsonar.projectKey=accor \
+        -Dsonar.projectBaseDir=. \
+        -Dsonar.sources=app/code/Accor/ \
+        -Dsonar.sourceEncoding=UTF-8 \
+        -Dsonar.login=$SONAR_LOGIN \
+        -Dsonar.analysis.mode=$SONAR_ANALYSIS_MODE \
+        -Dsonar.gitlab.api_version=v4 \
+        -Dsonar.gitlab.commit_sha=$CI_COMMIT_SHA \
+        -Dsonar.gitlab.ref_name=$CI_COMMIT_REF_NAME \
+        -Dsonar.gitlab.user_token=$GITLAB_USER_TOKEN \
+        -Dsonar.gitlab.project_id=$CI_PROJECT_ID \
+        -Dsonar.gitlab.only_issue_from_commit_line=true \
+        -Dsonar.gitlab.max_major_issues_gate=0 \
+        -Dsonar.gitlab.max_minor_issues_gate=0"
+
+# ---------------------- Unit tests ----------------------
+unit_test:
+  image: php:7.1-cli
+  stage: test
+  tags:
+    - php70
+  before_script:
+    - *provision
+    - *composer
+  script:
+    - './bin/phpunit -c ./dev/tests/unit/phpunit.xml.dist --log-junit junit/log.xml --coverage-xml junit/coverage/'
+  after_script:
+    # PHPUnit report format fix
+    - 'python ci/script/path-phpunit-report.py junit/log.xml'
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - 'junit/'
+    reports:
+      junit: 'junit/log.xml'
+  # Remove this line as soon as issues from unit tests are solved https://redmine-projets.smile.fr/issues/880097
+  allow_failure: true
+
+# ---------------- Sonar Full project analysis -----------------
+sonar_analyse:
+  image:
+    name: newtmitch/sonar-scanner:3.2-alpine
+    entrypoint: ['']
+  tags:
+    - docker-accor
+  stage: full-test
+  dependencies:
+    - unit_test
+  variables:
+    # To Avoid Shallow clone and analysis error from Sonar
+    GIT_DEPTH: 0
+    SONAR_ANALYSIS_MODE: 'publish'
+  script:
+    # Sonar scanner execution for full analysis
+    - "sonar-scanner \
+        -Dsonar.host.url=https://sonar.pp.cicd.aws.smile.fr \
+        -Dsonar.php.tests.reportPath=junit/log.xml \
+        -Dsonar.php.coverage.reportPaths=junit/coverage/ \
+        -Dsonar.projectBaseDir=. \
+        -Dsonar.sources=app/code/Accor/ \
+        -Dsonar.projectKey=accor \
+        -Dsonar.login=$SONAR_LOGIN \
+        -Dsonar.sourceEncoding=UTF-8 \
+        -Dsonar.analysis.mode=$SONAR_ANALYSIS_MODE \
+        -Dsonar.gitlab.commit_sha=$CI_COMMIT_SHA \
+        -Dsonar.gitlab.ref_name=$CI_COMMIT_SHORT_SHA \
+        -Dsonar.gitlab.project_id=$CI_PROJECT_ID \
+        -Dsonar.gitlab.user_token=$GITLAB_USER_TOKEN \
+        -Dsonar.gitlab.api_version=v4"
+
+# We want it to be done everytime to analyse Unit-test results
+  when: manual
