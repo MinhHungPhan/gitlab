@@ -11,6 +11,7 @@ The `sonar-mr` job, as updated in the `gitlab-ci.yml` file, introduces a sophist
 - [Execution and Analysis](#execution-and-analysis)
 - [Example](#example)
 - [Conclusion](#conclusion)
+- [References](#references)
 
 ## Job Description
 
@@ -54,3 +55,10 @@ This example highlights the SonarQube scanner execution, illustrating how it is 
 ## Conclusion
 
 The `sonar-mr` job represents a crucial enhancement in the CI/CD pipeline, specifically targeting code quality in merge requests. By integrating SonarQube analysis, this job ensures that new code submissions adhere to the established quality standards, fostering a culture of high code quality and continuous improvement.
+
+## References
+
+- [SonarSource on GitLab Code Quality](https://www.sonarsource.com/products/sonarcloud/features/integrations/gitlab-integration/)
+- [SonarSource Documentation on GitLab Integration](https://docs.sonarsource.com/sonarqube/latest/devops-platform-integration/gitlab-integration/)
+- [CI Integration Overview by SonarSource](https://docs.sonarsource.com/sonarqube/8.9/analyzing-source-code/ci-integration/overview/)
+- [GitLab CI template for SonarQube](https://to-be-continuous.gitlab.io/doc/ref/sonar/)
