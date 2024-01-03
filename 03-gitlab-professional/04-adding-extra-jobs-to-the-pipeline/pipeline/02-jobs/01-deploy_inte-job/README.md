@@ -1,17 +1,61 @@
 # Overview of `deploy_inte` Job in `gitlab-ci.yml`
 
-## Introduction
-
-The `deploy_inte` job defined in your `gitlab-ci.yml` file is a critical component of the deployment stage in the CI/CD pipeline for the Magento project. It is specifically tailored for deploying to an integration environment.
-
 ## Table of Contents
 
+- [Introduction](#introduction)
+- [External Dependencies for GitLab Pipeline](#external-dependencies-for-gitlab-pipeline)
+- [Prerequisites for the Deployment Job](#prerequisites-for-the-deployment-job)
 - [Job Configuration](#job-configuration)
 - [Scripts and Commands](#scripts-and-commands)
 - [Trigger Conditions](#trigger-conditions)
 - [Pipeline](#pipeline)
 - [Conclusion](#conclusion)
 - [References](#references)
+
+## Introduction
+
+The `deploy_inte` job defined in your `gitlab-ci.yml` file is a critical component of the deployment stage in the CI/CD pipeline for the Magento project. It is specifically tailored for deploying to an integration environment.
+
+## External Dependencies for GitLab Pipeline
+
+1. **Operating System Utilities and Libraries**:
+
+- `ssh`, `openssh-client`, `python`, `git`, `curl`, `python-pip`, `libldap2-dev`, `libsasl2-dev`, `bc`, `locales`: These are standard Linux utilities and libraries used for secure shell access, programming, file operations, and locale settings. They are installed via the `apt` package manager.
+
+2. **Python and Pipenv**:
+
+- Python and Pipenv are used for managing Python packages and environments. The script installs the latest version of pip using `curl https://bootstrap.pypa.io/get-pip.py` and then installs pipenv using pip.
+
+3. **AWS CLI**:
+
+- The AWS Command Line Interface is installed with `pip install awscli --upgrade --user`. It's used for interacting with Amazon Web Services, particularly for operations related to S3.
+
+4. **Debugging Tools**:
+
+- The script contains a `.debug_ssh` configuration for listing the contents of the `~/.ssh/` directory, likely for debugging SSH key configurations.
+
+5. **Docker Image**:
+
+- The `deploy_inte` job uses a Docker image `meanbee/magento:7.0-cli`. This is a PHP 7.0 CLI environment pre-configured for Magento development.
+
+6. **Git Operations**:
+
+- The script clones a Git repository from `git.smile.fr`. This is specific to your project's architecture and codebase.
+
+7. **Locale Configuration**:
+
+- The script sets locale variables to `en_US.UTF-8`. This is important for ensuring consistent character encoding and language settings.
+
+8. **Ansible and Deployment Scripts**:
+
+- It includes cloning an Ansible repository and running a deployment script from it. This suggests a dependency on Ansible for deployment operations.
+
+9. **Miscellaneous**:
+
+- The script uses `sed` to modify an ansible-playbook command for verbosity.
+- There are commands for manipulating system hosts file and SSH configurations, which are part of typical system operations.
+
+Ensure that your CI environment has access to all these dependencies and that versions are compatible with your project's requirements.
 
 ## Prerequisites for the Deployment Job
 
