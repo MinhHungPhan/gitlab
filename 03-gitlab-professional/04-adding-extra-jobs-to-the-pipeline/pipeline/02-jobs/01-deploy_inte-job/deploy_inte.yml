@@ -1,0 +1,70 @@
+# Various variables for the project
+
+# Prerequisiste for the deploy job (WIP)
+.deploy_provision: &deploy_provision
+    - apt update -yqq
+    - apt install -yqq ssh openssh-client python git curl python-pip libldap2-dev libsasl2-dev bc locales
+    - export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/games:~/.local/bin
+    - rm -rf ./build/dist/*
+
+# Get pip for modules installation
+.get_pip: &get_pip
+    - curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    - python get-pip.py
+    - pip install pipenv
+
+# Get pip for modules installation
+.get_pip: &get_pip
+    - curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    - python get-pip.py
+    - pip install pipenv
+
+# Tool to use on after_script for debug
+.debug_ssh: &debug_ssh
+    - ls -la ~/.ssh/
+
+# List and order of the stages
+stages:
+  - test
+  - sonarqube-analysis
+  - deploy
+
+# ------------------- Deploy -------------------
+# Debug me easy with the fast tag creation:
+# export GIT_TAG_NOW="magento-inte-$(date +'%Y%m%d-%H%M%S')" && git tag $GIT_TAG_NOW && git push origin $GIT_TAG_NOW
+#
+deploy_inte:
+    image: meanbee/magento:7.0-cli
+    tags:
+        - docker-accor
+    stage: deploy
+#    dependencies:
+#        - package
+    before_script:
+        - *deploy_provision
+        - *get_pip
+        - pip install awscli --upgrade --user
+        - "export s3_package='aws s3 ls s3://newaccorshop-releases/magento/inte01/ --profile accor-prod | sort | tail -n 2 | grep accor-magento | cut -d \'-\' -f 6- | tail -n 1'"
+        - 'git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@git.smile.fr/smile-outsourcing/client-architectures/accor-newaccorshop'
+        #- cat /etc/locale.gen
+        - export LC_ALL='en_US.UTF-8' && export LANG='en_US.UTF-8' && export LANGUAGE='en_US.UTF-8'
+        - pip2 uninstall backports.functools-lru-cache && apt install python-backports.functools-lru-cache
+        - *ssh_provision
+        - echo '172.18.1.160 astoreshop-corenonprod-bastion1.aws.smile.fr' >> /etc/hosts
+        - echo -e "Host *\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile=/dev/null" >> /etc/ssh/ssh_config
+        - cd accor-newaccorshop/ansible/magento2/
+        - git checkout in01
+        - git pull
+        - sed -i 's/ansible-playbook/ansible-playbook -vvvv/g' ./scripts/deploy.sh
+    script:
+        - './scripts/deploy.sh in01.aws_ec2.yml -p ${s3_package} -s'
+    after_script:
+        - *debug_ssh
+    only:
+        refs:
+            - tags
+        variables:
+            # magento-inte-19901113-010112
+            - $CI_COMMIT_TAG =~ /^magento-inte-[0-9]{8}-[0-9]{6}$/
+            - $CI_PROJECT_PATH == 'Accor/magento'
+    when: manual
