@@ -1,6 +1,6 @@
 # Various variables for the project
 
-# Prerequisiste for the deploy job (WIP)
+# prerequisite for the deploy job (WIP)
 .deploy_provision: &deploy_provision
     - apt update -yqq
     - apt install -yqq ssh openssh-client python git curl python-pip libldap2-dev libsasl2-dev bc locales
