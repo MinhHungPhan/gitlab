@@ -15,12 +15,6 @@
 
 The recent updates to the `gitlab-ci.yml` file have introduced a streamlined and clearly defined sequence of stages in the CI/CD pipeline. These stages represent the lifecycle of the pipeline, outlining the order in which various jobs and tasks are executed.
 
-## Table of Contents
-
-- [Stages Description](#stages-description)
-- [Role and Function of Each Stage](#role-and-function-of-each-stage)
-- [Conclusion](#conclusion)
-
 ## Stages Description
 
 The pipeline is structured into the following stages:
