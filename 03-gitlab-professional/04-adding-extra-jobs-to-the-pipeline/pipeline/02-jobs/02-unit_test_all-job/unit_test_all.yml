@@ -1,0 +1,40 @@
+# Mainly useful for composer dependencies
+.ssh_provision: &ssh_provision
+    - which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )
+    - eval $(ssh-agent -s)
+    - echo "$SSH_ID_RSA" | tr -d "\r" | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod -R 700 ~/.ssh
+    - echo "$SSH_ID_RSA" | tr -d "\r" > ~/.ssh/id_rsa-ci-accor
+    - bash ci/script/add-gitlab-token.bash composer.lock deployv2/environments.py .spbuilder.yml
+
+# Get Composer programmatically
+.composer: &composer
+    - sh ci/script/get-composer.sh
+    - bin/composer self-update 1.10.17 #Fix composer version to latest 1.x
+    - bin/composer install -q
+
+# List and order of the stages
+stages:
+  - test
+  - sonarqube-analysis
+  - deploy
+
+# ---------------------- Unit tests (Magento and Accor) ----------------------
+# Simple unit test check during merge requests.after_script
+# - xdebug is deactivated to reduce the execution time
+# - no code coverage either
+unit_test_all:
+    stage: test
+    image: meanbee/magento:7.0-cli
+    tags:
+        - docker-accor
+    before_script:
+        - apt update && apt upgrade -y
+        - apt install -y wget zip unzip
+        - docker-php-ext-install bcmath
+        - *ssh_provision
+        - *composer
+        - find /usr/local/etc/php/conf.d/ -type f -name '*xdebug*.ini' -exec rm -f {} \;
+    script:
+        - ./bin/phpunit -d memory_limit=2048M -c $PHPUNIT_CONFIG_ALL
