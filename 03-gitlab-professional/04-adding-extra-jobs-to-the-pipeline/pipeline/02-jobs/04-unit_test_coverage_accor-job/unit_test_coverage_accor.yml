@@ -1,0 +1,46 @@
+# Mainly useful for composer dependencies
+.ssh_provision: &ssh_provision
+    - which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )
+    - eval $(ssh-agent -s)
+    - echo "$SSH_ID_RSA" | tr -d "\r" | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod -R 700 ~/.ssh
+    - echo "$SSH_ID_RSA" | tr -d "\r" > ~/.ssh/id_rsa-ci-accor
+    - bash ci/script/add-gitlab-token.bash composer.lock deployv2/environments.py .spbuilder.yml
+
+# Get Composer programmatically
+.composer: &composer
+    - sh ci/script/get-composer.sh
+    - bin/composer self-update 1.10.17 #Fix composer version to latest 1.x
+    - bin/composer install -q
+
+# List and order of the stages
+stages:
+  - test
+  - sonarqube-analysis
+  - deploy
+
+# ---------------------- Unit tests coverage for ACCOR specific CODE ----------------------
+# Advanced unit test with code coverage generation. This job is launched by a scheduled pipeline in gitlab
+unit_tests_coverage_accor:
+    stage: test
+    image: meanbee/magento:7.0-cli
+    tags:
+        - docker-accor
+    before_script:
+        - apt update && apt upgrade -y
+        - apt install -y wget
+        - docker-php-ext-install bcmath
+        - *ssh_provision
+        - *composer
+    script:
+        - ./bin/phpunit -d memory_limit=2048M -c $PHPUNIT_CONFIG_ACCOR --colors=never
+        - python ci/script/path-phpunit-report.py $PHPUNIT_REPORT_FOLDER/$PHPUNIT_REPORT_FILENAME_ACCOR # Fixes the php unit report file format
+    after_script:
+        # Used for code coverage parsing see https://docs.gitlab.com/ee/ci/pipelines/settings.html#test-coverage-parsing
+        - cat $PHPUNIT_REPORT_FOLDER/$PHPUNIT_REPORT_TXT_ACCOR
+    artifacts:
+        when: always
+        expire_in: 1 week
+        paths:
+            - 'phpunit/coverage/'
