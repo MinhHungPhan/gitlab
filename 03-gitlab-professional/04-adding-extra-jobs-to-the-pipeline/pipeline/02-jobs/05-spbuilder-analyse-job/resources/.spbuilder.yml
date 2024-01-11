@@ -1,0 +1,132 @@
+# Contains global Spbuilder configuration
+global:
+  technology:         magento
+  technology_version: 2
+  log_dir:     build/logs
+  package_dir: build/dist
+  clean: true
+
+# Quality tools configuration
+tools:
+
+  # Runs PHPUnit tests
+  # phpunit:
+  #   configuration: dev/tests/unit # (Mandatory) Any 'phpunit -c' compatible value
+  #   coverage: true                # (Optional) If set to true, will generate a XML clover coverage report
+
+  # Runs phpspec test
+  # phpspec:
+  #   configuration: phpspec.yml    # (Mandatory) Any 'phpspec -c' compatible value
+
+  # Will recursively run 'php -l' on directories and matching file extensions
+  phplint:
+    files:                        # (Mandatory) Directories to check
+      - app/code
+
+  # Runs PHP_CodeSniffer
+  phpcs:
+    files:                        # (Mandatory) Directories to check
+      - app/code
+    standard: vendor/smile/php-codesniffer-rules-magento-2/src/Magento2/
+    extensions:
+        - php
+        - phtml
+
+      # Runs PHPMD
+  phpmd:
+    files:                        # (Mandatory) Directories to check. Caution: one report file will be generated per directory.
+      - app/code
+    rulesets:                     # (Mandatory) Rulesets to check
+      - cleancode
+      - codesize
+      - design
+      - vendor/smile/php-md-rules/resources/rulesets/Magento2/naming.xml
+      - unusedcode
+
+  # Runs PDepend
+  pdepend:
+    files:                        # (Mandatory) Directories to check.
+      - app/code
+    enable:                       # (Optional) List of enable reports
+      - jdepend-xml
+      - jdepend-chart
+      - summary-xml
+      - overview-pyramid
+
+  # Runs phpcpd
+  phpcpd:
+    files:                        # (Mandatory) Directories to check.
+      - app/code
+
+  # Runs SmileAnalyser
+  smileanalyser:
+    config_file: .smileanalyser.yml
+
+  # Runs Qafoo Quality Analyzer
+  visualization:
+    files:
+    hostname: localhost
+    port: 8080
+
+# Package creation
+package:
+  format: tar.gz                  # Package format (availables : tar, tar,gz, tar.bz2, zip, phar, none)
+  commands:                       # Commands to run during packaging
+    - composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --ignore-platform-reqs
+  excludes:                       # Path to exclude from package
+    - ./architecture
+    - ./architecturev2
+    - ./aws-platform
+    - ./build
+    - ./docs
+    - ./scripts
+    - ./lxcfile
+    - ./CHANGELOG.md
+    - ./CONTRIBUTING.md
+    - ./COPYING.txt
+    - ./ISSUE_TEMPLATE.md
+    - ./README.md
+    - ./.gitignore
+    - ./.php_cs
+    - ./.spbuilder.yml
+    - ./.smileanalyser.yml
+    - ./.travis.yml
+    - ./.htaccess.sample
+    - ./nginx.conf.sample
+    - ./package.json.sample
+    - ./package.json
+    - ./php.ini.sample
+    - ./Gruntfile.js.sample
+    - ./Gruntfile.js
+    - .htaccess
+    - ./_extra
+    - .bugtracker-conf.yml
+    - ./deployv2
+  skipRoot: true
+  vcs:
+    type: git                               # VCS Type (availables : git, svn)
+    url: git@git.smile.fr:Accor/magento.git # Repository URL (default to local git repo, with .git extension, not the https one)
+
+# Push to external tools
+push:
+  # Push to a file in the global.log_dir folder
+  file:
+    location: resume.xml
+
+  # Push to Jenkins Viewer
+  jenkins_viewer:
+    location: http://pic-php-viewer.vitry.intranet/push
+
+# Cherry pick configuration
+cherrypick:
+    inte:
+        source: develop
+        destination: inte
+
+    staging:
+        source: inte
+        destination: release-2.8.0
+
+    master:
+        source: release-2.8.0
+        destination: master
