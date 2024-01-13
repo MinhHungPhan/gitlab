@@ -10,7 +10,7 @@ The `spbuilder-analyse` job has been introduced in the latest update to the `git
 - [Configuration and Execution](#configuration-and-execution)
 - [Scripts and Quality Checks](#scripts-and-quality-checks)
 - [Artifact Management](#artifact-management)
-- [Example](#example)
+- [Pipeline](#pipeline)
 - [Conclusion](#conclusion)
 - [References](#references)
 
@@ -21,6 +21,16 @@ The `spbuilder-analyse` job has been introduced in the latest update to the `git
 
 ## Configuration and Execution
 
+```yaml
+spbuilder-analyse:
+    tags: [php71]
+    stage: test
+    before_script:
+        - *ssh_provision
+        - scl enable rh-php72 'composer install -q'
+    # ... existing code ...
+```
+
 - **Stage**: Allocated to the `test` stage.
 - **Tags**: Uses `php71` for runner selection.
 - **Before Script**:
@@ -29,6 +39,19 @@ The `spbuilder-analyse` job has been introduced in the latest update to the `git
 
 ## Scripts and Quality Checks
 
+```yaml
+spbuilder-analyse:
+    # ... existing code ...
+    script:
+        - scl enable rh-php72 'bin/spbuilder analyze --ignore-tool=visualization'
+        - test $(grep '<error ' build/logs/checkstyle.xml | wc -l) -le "$PHPCS_ALLOWED_ERROR" || (echo "Checking PHPCS failed, $(grep '<error ' build/logs/checkstyle.xml | wc -l) exceed $PHPCS_ALLOWED_ERROR errors" && false)
+        - test $(grep '<violation ' build/logs/pmd.xml | wc -l) -le "$PHPMD_ALLOWED_ERROR" || (echo "Checking PHPMD failed, $(grep '<violation ' build/logs/pmd.xml | wc -l) exceed $PHPMD_ALLOWED_ERROR errors" && false)
+        - test $(grep '<error ' build/logs/smileanalyser.xml | wc -l) -le "$SMILEANALYSER_ALLOWED_ERROR" || (echo "Checking SmileAnalyser failed, $(grep '<error ' build/logs/smileanalyser.xml | wc -l) exceed $SMILEANALYSER_ALLOWED_ERROR errors" && false)
+    after_script:
+        - grep '<error ' build/logs/checkstyle.xml | wc -l && grep '<violation ' build/logs/pmd.xml | wc -l && grep '<error ' build/logs/smileanalyser.xml | wc -l
+    # ... existing code ...
+```
+
 - **Script**:
   - Runs Spbuilder analysis, excluding the visualization tool.
   - Performs checks against set thresholds for PHPCS, PHPMD, and SmileAnalyser, using the corresponding allowed error variables (`PHPCS_ALLOWED_ERROR`, `PHPMD_ALLOWED_ERROR`, `SMILEANALYSER_ALLOWED_ERROR`).
@@ -36,21 +59,43 @@ The `spbuilder-analyse` job has been introduced in the latest update to the `git
 - **Quality Gate Checks**:
   - Ensures that the number of errors detected by each tool does not exceed the predefined limits.
 
-## Artifact Management
-
 - **After Script**:
   - Reports the total number of errors detected by each tool for transparency.
-- **Artifacts**:
-  - Stores logs from the analyses in `build/logs/` with a retention period of one week.
 
-## Example
+## Artifact Management
 
 ```yaml
 spbuilder-analyse:
-  ...
-  script:
-    - scl enable rh-php72 'bin/spbuilder analyze --ignore-tool=visualization'
-  ...
+    # ... existing code ...
+    artifacts:
+        paths:
+            - build/logs/
+        expire_in: 1 week
+```
+
+- **Artifacts**:
+  - Stores logs from the analyses in `build/logs/` with a retention period of one week.
+
+## Pipeline
+
+```yaml
+spbuilder-analyse:
+    tags: [php71]
+    stage: test
+    before_script:
+        - *ssh_provision
+        - scl enable rh-php72 'composer install -q'
+    script:
+        - scl enable rh-php72 'bin/spbuilder analyze --ignore-tool=visualization'
+        - test $(grep '<error ' build/logs/checkstyle.xml | wc -l) -le "$PHPCS_ALLOWED_ERROR" || (echo "Checking PHPCS failed, $(grep '<error ' build/logs/checkstyle.xml | wc -l) exceed $PHPCS_ALLOWED_ERROR errors" && false)
+        - test $(grep '<violation ' build/logs/pmd.xml | wc -l) -le "$PHPMD_ALLOWED_ERROR" || (echo "Checking PHPMD failed, $(grep '<violation ' build/logs/pmd.xml | wc -l) exceed $PHPMD_ALLOWED_ERROR errors" && false)
+        - test $(grep '<error ' build/logs/smileanalyser.xml | wc -l) -le "$SMILEANALYSER_ALLOWED_ERROR" || (echo "Checking SmileAnalyser failed, $(grep '<error ' build/logs/smileanalyser.xml | wc -l) exceed $SMILEANALYSER_ALLOWED_ERROR errors" && false)
+    after_script:
+        - grep '<error ' build/logs/checkstyle.xml | wc -l && grep '<violation ' build/logs/pmd.xml | wc -l && grep '<error ' build/logs/smileanalyser.xml | wc -l
+    artifacts:
+        paths:
+            - build/logs/
+        expire_in: 1 week
 ```
 
 This example demonstrates how the Spbuilder analysis is executed within the job, showcasing the integration of quality checks and the use of Software Collections for a specific PHP version.
