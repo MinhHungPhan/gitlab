@@ -1,0 +1,45 @@
+# List and order of the stages
+stages:
+  - test
+  - sonarqube-analysis
+  - deploy
+
+# ---------------- Full project analysis -----------------
+# Sonarqube analysis with code coverage integration. Results are published in Sonarqube
+# This job is launched by a scheduled pipeline in gitlab
+# Code coverage report only includes Accor dedicated code coverage
+sonar_analyse:
+    image:
+        name: newtmitch/sonar-scanner:3.2-alpine
+        entrypoint: ['']
+    tags:
+        - docker-accor
+    stage: sonarqube-analysis
+    dependencies:
+        - unit_tests_coverage_accor
+    needs:
+        - unit_tests_coverage_accor
+    variables:
+        # To Avoid Shallow clone and analysis error from Sonar
+        GIT_DEPTH: 0
+        SONAR_ANALYSIS_MODE: 'publish'
+    before_script:
+        - ls -la $PHPUNIT_REPORT_FOLDER
+    script:
+        - "sonar-scanner \
+            -Dsonar.host.url=https://sonar.pp.cicd.aws.smile.fr \
+            -Dsonar.php.tests.reportPath=$PHPUNIT_REPORT_FOLDER/$PHPUNIT_REPORT_FILENAME_ACCOR \
+            -Dsonar.php.coverage.reportPaths=$PHPUNIT_REPORT_FOLDER/$PHPUNIT_REPORT_CLOVER_ACCOR \
+            -Dsonar.projectBaseDir=. \
+            -Dsonar.sources=app/code/Accor/ \
+            -Dsonar.projectKey=accor \
+            -Dsonar.login=$SONAR_LOGIN \
+            -Dsonar.sourceEncoding=UTF-8 \
+            -Dsonar.analysis.mode=$SONAR_ANALYSIS_MODE \
+            -Dsonar.gitlab.commit_sha=$CI_COMMIT_SHA \
+            -Dsonar.gitlab.ref_name=$CI_COMMIT_SHORT_SHA \
+            -Dsonar.gitlab.project_id=$CI_PROJECT_ID \
+            -Dsonar.gitlab.user_token=$GITLAB_USER_TOKEN \
+            -Dsonar.gitlab.api_version=v4"
+    only:
+        - schedules
