@@ -1,0 +1,37 @@
+# List and order of the stages
+stages:
+  - test
+  - sonarqube-analysis
+  - deploy
+
+# ---------------- Merge request analysis ----------------
+# This is used when a merge request is submitted to check the code quality based on the Quality gate defined on
+# Sonarqube and with the specific rules declared
+sonar-mr:
+    image:
+        name: newtmitch/sonar-scanner:3.2-alpine
+        entrypoint: ['']
+    stage: test
+    variables:
+        SONAR_ANALYSIS_MODE: 'preview'
+        SONAR_SCANNER_OPTS: '-Xmx2G'
+    tags:
+        - docker-accor
+    script:
+        - "sonar-scanner \
+            -Dsonar.host.url=https://sonar.pp.cicd.aws.smile.fr \
+            -Dsonar.projectKey=accor \
+            -Dsonar.projectBaseDir=. \
+            -Dsonar.sources=app/code/Accor/ \
+            -Dsonar.sourceEncoding=UTF-8 \
+            -Dsonar.login=$SONAR_LOGIN \
+            -Dsonar.analysis.mode=$SONAR_ANALYSIS_MODE \
+            -Dsonar.gitlab.api_version=v4 \
+            -Dsonar.gitlab.commit_sha=$CI_COMMIT_SHA \
+            -Dsonar.gitlab.ref_name=$CI_COMMIT_REF_NAME \
+            -Dsonar.gitlab.user_token=$GITLAB_USER_TOKEN \
+            -Dsonar.gitlab.project_id=$CI_PROJECT_ID \
+            -Dsonar.gitlab.only_issue_from_commit_line=true \
+            -Dsonar.gitlab.max_major_issues_gate=0 \
+            -Dsonar.gitlab.max_minor_issues_gate=0 \
+            -X"
