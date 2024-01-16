@@ -1,0 +1,33 @@
+# Initialize the configuration to contact the correct third parties
+# Mainly useful for composer dependencies
+.ssh_provision: &ssh_provision
+    - which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )
+    - eval $(ssh-agent -s)
+    - echo "$SSH_ID_RSA" | tr -d "\r" | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod -R 700 ~/.ssh
+    - echo "$SSH_ID_RSA" | tr -d "\r" > ~/.ssh/id_rsa-ci-accor
+    - bash ci/script/add-gitlab-token.bash composer.lock deployv2/environments.py .spbuilder.yml
+
+# Prerequisiste for the deploy job (WIP)
+.deploy_provision: &deploy_provision
+    - apt update -yqq
+    - apt install -yqq ssh openssh-client python git curl python-pip libldap2-dev libsasl2-dev bc locales
+    - export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/games:~/.local/bin
+    - rm -rf ./build/dist/*
+
+# Get pip for modules installation
+.get_pip: &get_pip
+    - curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    - python get-pip.py
+    - pip install pipenv
+
+# Get Composer programmatically
+.composer: &composer
+    - sh ci/script/get-composer.sh
+    - bin/composer self-update 1.10.17 #Fix composer version to lastest 1.x
+    - bin/composer install -q
+
+# Tool to use on after_script for debug
+.debug_ssh: &debug_ssh
+    - ls -la ~/.ssh/
