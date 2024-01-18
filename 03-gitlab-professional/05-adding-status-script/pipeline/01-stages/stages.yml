@@ -1,0 +1,6 @@
+# List and order of the stages
+stages:
+  - build
+  - test
+  - sonarqube-analysis
+  - deploy
