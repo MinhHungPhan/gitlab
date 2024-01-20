@@ -1,0 +1,68 @@
+# Mainly useful for composer dependencies
+.ssh_provision: &ssh_provision
+    - which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )
+    - eval $(ssh-agent -s)
+    - echo "$SSH_ID_RSA" | tr -d "\r" | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod -R 700 ~/.ssh
+    - echo "$SSH_ID_RSA" | tr -d "\r" > ~/.ssh/id_rsa-ci-accor
+    - bash ci/script/add-gitlab-token.bash composer.lock deployv2/environments.py .spbuilder.yml
+
+# prerequisite for the deploy job (WIP)
+.deploy_provision: &deploy_provision
+    - apt update -yqq
+    - apt install -yqq ssh openssh-client python git curl python-pip libldap2-dev libsasl2-dev bc locales
+    - export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/games:~/.local/bin
+    - rm -rf ./build/dist/*
+
+# Get pip for modules installation
+.get_pip: &get_pip
+    - curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    - python get-pip.py
+    - pip install pipenv
+
+# List and order of the stages
+stages:
+  - build
+  - test
+  - sonarqube-analysis
+  - deploy
+
+# ------------------- Deploy -------------------
+# Debug me easy with the fast tag creation:
+# export GIT_TAG_NOW="magento-inte-$(date +'%Y%m%d-%H%M%S')" && git tag $GIT_TAG_NOW && git push origin $GIT_TAG_NOW
+#
+deploy_inte:
+    tags:
+        - accor-delivery-forge
+    stage: deploy
+#    dependencies:
+#        - package
+    variables:
+        DEPLOY_ENV: in01
+    before_script:
+        - *deploy_provision
+        - *get_pip
+        - pip install awscli --upgrade --user
+        - python ci/script/script.py 57QDBPOMTG4OBZ7WHJAMRGEPFPMAO275FVCLCEQD3QQAN2CSZ3DQGSAVTBPRTVAG | aws-mfa --profile master
+        - "export S3_PACKAGE=$(aws s3 ls s3://newaccorshop-releases/magento/inte01/ --profile accor-prod | sort | tail -n 2 | grep accor-magento | cut -d '-' -f 6- | tail -n 1)"
+        - 'git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@git.smile.fr/smile-outsourcing/client-architectures/accor-newaccorshop'
+        - *ssh_provision
+        - cd accor-newaccorshop/ansible/magento2/
+        - git checkout ${DEPLOY_ENV}
+        - git pull
+    script:
+        - echo "We are about to deliver ${S3_PACKAGE} on ${DEPLOY_ENV}"
+        #- './scripts/deploy.sh ${DEPLOY_ENV}.aws_ec2.yml -p ${s3_package} -s'
+        - ./scripts/cache-clean.sh ${DEPLOY_ENV}.aws_ec2.yml
+    after_script:
+        - php ci/script/continuous-delivery-notification.php
+    allow_failure: true
+    only:
+        refs:
+            - tags
+            - inte
+        variables:
+            # magento-inte-19901113-010112
+            - $CI_COMMIT_TAG =~ /magento-inte-[0-9]{8}-[0-9]{6}/
+    when: manual
