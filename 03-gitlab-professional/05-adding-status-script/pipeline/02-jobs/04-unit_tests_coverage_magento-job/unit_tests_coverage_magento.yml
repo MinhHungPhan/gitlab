@@ -1,0 +1,95 @@
+# Mainly useful for composer dependencies
+.ssh_provision: &ssh_provision
+    - which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )
+    - eval $(ssh-agent -s)
+    - echo "$SSH_ID_RSA" | tr -d "\r" | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod -R 700 ~/.ssh
+    - echo "$SSH_ID_RSA" | tr -d "\r" > ~/.ssh/id_rsa-ci-accor
+    - bash ci/script/add-gitlab-token.bash composer.lock deployv2/environments.py .spbuilder.yml
+
+# -------------------- Build composer dependencies ------------------------
+composer-build:
+    stage: build
+    image: meanbee/magento:7.0-cli
+    tags:
+        - docker-accor
+    before_script:
+        - apt update && apt install -y libzip-dev wget
+        - docker-php-ext-install zip
+        - *ssh_provision
+    variables:
+        COMPOSER_MEMORY_LIMIT: -1
+    script:
+        - sh ci/script/get-composer.sh
+        - bin/composer self-update 1.10.17 #Fix composer version to lastest 1.x
+        - composer install -q
+    after_script:
+        - ls -la 
+    cache:
+        key:
+            files:
+                - composer.lock
+        paths:
+            - vendor
+            - app/etc
+            - generated
+            - dev/tests/unit
+            - app/autoload.php
+            - app/bootstrap.php
+            - app/functions.php
+            - setup
+            - lib
+    artifacts:
+        paths:
+            - vendor
+            - app/etc
+            - generated
+            - dev/tests/unit
+            - app/autoload.php
+            - app/bootstrap.php
+            - app/functions.php
+            - setup
+            - lib
+            - composer.lock
+        expire_in: 1 week
+    except:
+        refs:
+            - tags
+
+# List and order of the stages
+stages:
+  - build
+  - test
+  - sonarqube-analysis
+  - deploy
+  
+# ---------------------- Unit tests coverage for Magento native code ----------------------
+# Advanced unit test with code coverage generation. This job is launched by a scheduled pipeline in gitlab
+unit_tests_coverage_magento:
+    stage: test
+    image: meanbee/magento:7.0-cli
+    tags:
+        - docker-accor
+    before_script:
+        - apt update && apt upgrade -y
+        - apt install -y wget zip unzip
+        - docker-php-ext-install bcmath
+        - *ssh_provision
+    script:
+        - vendor/phpunit/phpunit/phpunit -d memory_limit=2048M -c $PHPUNIT_CONFIG_MAGENTO --colors=never
+    after_script:
+        # Used for code coverage parsing see https://docs.gitlab.com/ee/ci/pipelines/settings.html#test-coverage-parsing
+        - cat $PHPUNIT_REPORT_FOLDER/$PHPUNIT_REPORT_TXT_MAGENTO
+    artifacts:
+        when: always
+        expire_in: 1 week
+        paths:
+            - 'phpunit/coverage/'
+    only:
+        - schedules
+    allow_failure: true
+    needs:
+        -   job: composer-build
+            artifacts: true
+
