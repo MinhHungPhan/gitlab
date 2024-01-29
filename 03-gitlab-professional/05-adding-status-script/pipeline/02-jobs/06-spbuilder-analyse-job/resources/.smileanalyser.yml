@@ -1,0 +1,26 @@
+# The value of this key must be the name of the profile group to use
+profile_group: magento2
+
+# The src folder of the application
+src_folder:
+
+# namespace weight, to see bad dependencies order
+namespace_weight:
+  # Magento
+  Magento:    10
+
+  # Community
+  #Xxxx:      30
+
+  # Smile
+  Smile:      50
+
+  # Project
+  Accor:   70
+
+# list of community namespace to ignore in the tests
+community_namespace_to_ignore_for_dependencies: true
+community_namespace_to_ignore_for_mysql:        true
+community_namespace_to_ignore_for_performances: false
+community_namespace_to_ignore_for_templates:    true
+#community_namespace_to_ignore:
