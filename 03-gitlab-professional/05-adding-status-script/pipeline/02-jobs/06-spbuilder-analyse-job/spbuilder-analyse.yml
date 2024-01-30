@@ -1,0 +1,48 @@
+# Mainly useful for composer dependencies
+.ssh_provision: &ssh_provision
+    - which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )
+    - eval $(ssh-agent -s)
+    - echo "$SSH_ID_RSA" | tr -d "\r" | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod -R 700 ~/.ssh
+    - echo "$SSH_ID_RSA" | tr -d "\r" > ~/.ssh/id_rsa-ci-accor
+    - bash ci/script/add-gitlab-token.bash composer.lock deployv2/environments.py .spbuilder.yml
+
+# List and order of the stages
+stages:
+  - build
+  - test
+  - sonarqube-analysis
+  - deploy
+
+# -------------------- Code Check ------------------------
+# Code analysis based on Spbuilder tool
+# Current configuration available on .spbuilder.yml and .smileanalyser.yml
+spbuilder-analyse:
+    tags: [php71]
+    stage: test
+    before_script:
+        - *ssh_provision
+    script:
+        - scl enable rh-php72 'vendor/smile/spbuilder/bin/spbuilder analyze --ignore-tool=visualization'
+        - test $(grep '<error ' build/logs/checkstyle.xml | wc -l) -le "$PHPCS_ALLOWED_ERROR" || (echo "Checking PHPCS failed, $(grep '<error ' build/logs/checkstyle.xml | wc -l) exceed $PHPCS_ALLOWED_ERROR errors" && false)
+        - test $(grep '<violation ' build/logs/pmd.xml | wc -l) -le "$PHPMD_ALLOWED_ERROR" || (echo "Checking PHPMD failed, $(grep '<violation ' build/logs/pmd.xml | wc -l) exceed $PHPMD_ALLOWED_ERROR errors" && false)
+        - test $(grep '<error ' build/logs/smileanalyser.xml | wc -l) -le "$SMILEANALYSER_ALLOWED_ERROR" || (echo "Checking SmileAnalyser failed, $(grep '<error ' build/logs/smileanalyser.xml | wc -l) exceed $SMILEANALYSER_ALLOWED_ERROR errors" && false)
+    after_script:
+        - 'curl --output checkstyle-valid.xml --header "PRIVATE-TOKEN: $GITLAB_USER_TOKEN" "https://git.smile.fr/api/v4/projects/6095/jobs/artifacts/develop/raw/build/logs/checkstyle.xml?job=spbuilder-analyse"'
+        - 'curl --output pmd-valid.xml --header "PRIVATE-TOKEN: $GITLAB_USER_TOKEN" "https://git.smile.fr/api/v4/projects/6095/jobs/artifacts/develop/raw/build/logs/pmd.xml?job=spbuilder-analyse"'
+        - 'curl --output smileanalyser-valid.xml --header "PRIVATE-TOKEN: $GITLAB_USER_TOKEN" "https://git.smile.fr/api/v4/projects/6095/jobs/artifacts/develop/raw/build/logs/smileanalyser.xml?job=spbuilder-analyse"'
+        - diff -uB pmd-valid.xml build/logs/pmd.xml || true
+        - diff -uB smileanalyser-valid.xml build/logs/smileanalyser.xml || true
+        - diff -uB checkstyle-valid.xml build/logs/checkstyle.xml || true
+    artifacts:
+        paths:
+            - build/logs/
+        expire_in: 1 week
+    needs:
+        - job: composer-build
+          artifacts: true
+    except:
+        refs:
+            - tags
+
