@@ -1,0 +1,15 @@
+# Various variables for the project
+variables:
+  SONAR_SCANNER_VERSION: 3.3.0.1492
+  PHPCS_ALLOWED_ERROR: 31
+  PHPMD_ALLOWED_ERROR: 6
+  SMILEANALYSER_ALLOWED_ERROR: 119
+  PHPUNIT_CONFIG_MAGENTO: './dev/tests/unit/phpunit-magento.xml'
+  PHPUNIT_CONFIG_ACCOR: './dev/tests/unit/phpunit-accor.xml'
+  PHPUNIT_CONFIG_ALL: './dev/tests/unit/phpunit.xml.dist'
+  # File name and paths below also defined in $PHPUNIT_CONFIG_ACCOR change them accordingly
+  PHPUNIT_REPORT_FOLDER: 'phpunit/coverage'
+  PHPUNIT_REPORT_TXT_MAGENTO: 'magento-result.txt'
+  PHPUNIT_REPORT_TXT_ACCOR: 'accor-result.txt'
+  PHPUNIT_REPORT_FILENAME_ACCOR: 'accor-junit.xml'
+  PHPUNIT_REPORT_CLOVER_ACCOR: 'accor-coverage-clover.xml'
