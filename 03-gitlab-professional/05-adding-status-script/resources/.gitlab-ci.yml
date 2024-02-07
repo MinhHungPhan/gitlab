@@ -1,0 +1,377 @@
+# ####################################################################################################### #
+# For documentation of this file see: https://git.smile.fr/Accor/magento/blob/develop/dev/docs/ci-cd.md   #
+# ####################################################################################################### #
+
+
+# Various variables for the project
+variables:
+  SONAR_SCANNER_VERSION: 3.3.0.1492
+  PHPCS_ALLOWED_ERROR: 31
+  PHPMD_ALLOWED_ERROR: 6
+  SMILEANALYSER_ALLOWED_ERROR: 119
+  PHPUNIT_CONFIG_MAGENTO: './dev/tests/unit/phpunit-magento.xml'
+  PHPUNIT_CONFIG_ACCOR: './dev/tests/unit/phpunit-accor.xml'
+  PHPUNIT_CONFIG_ALL: './dev/tests/unit/phpunit.xml.dist'
+  # File name and paths below also defined in $PHPUNIT_CONFIG_ACCOR change them accordingly
+  PHPUNIT_REPORT_FOLDER: 'phpunit/coverage'
+  PHPUNIT_REPORT_TXT_MAGENTO: 'magento-result.txt'
+  PHPUNIT_REPORT_TXT_ACCOR: 'accor-result.txt'
+  PHPUNIT_REPORT_FILENAME_ACCOR: 'accor-junit.xml'
+  PHPUNIT_REPORT_CLOVER_ACCOR: 'accor-coverage-clover.xml'
+
+# Initialize the configuration to contact the correct third parties
+# Mainly useful for composer dependencies
+.ssh_provision: &ssh_provision
+    - which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )
+    - eval $(ssh-agent -s)
+    - echo "$SSH_ID_RSA" | tr -d "\r" | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod -R 700 ~/.ssh
+    - echo "$SSH_ID_RSA" | tr -d "\r" > ~/.ssh/id_rsa-ci-accor
+    - bash ci/script/add-gitlab-token.bash composer.lock composer.json deployv2/environments.py .spbuilder.yml
+
+# Prerequisiste for the deploy job (WIP)
+.deploy_provision: &deploy_provision
+    - sudo apt update -yqq
+    - sudo apt install -yqq ssh openssh-client python git curl python-pip libldap2-dev libsasl2-dev bc locales
+    - export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/bin:/usr/games:~/.local/bin
+    - rm -rf ./build/dist/*
+
+# Get pip for modules installation
+.get_pip: &get_pip
+    - curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    - python3 get-pip.py
+    - pip3 install pipenv
+
+# Tool to use on after_script for debug
+.debug_ssh: &debug_ssh
+    - ls -la ~/.ssh/
+
+# List and order of the stages
+stages:
+  - build
+  - test
+  - sonarqube-analysis
+#  - package
+  - deploy
+
+# -------------------- Build composer dependencies ------------------------
+composer-build:
+    stage: build
+    image: meanbee/magento:7.0-cli
+    tags:
+        - docker-accor
+    before_script:
+        - apt update && apt install -y libzip-dev wget
+        - docker-php-ext-install zip
+        - *ssh_provision
+    variables:
+        COMPOSER_MEMORY_LIMIT: -1
+    script:
+        - sh ci/script/get-composer.sh
+        - bin/composer self-update 1.10.17 #Fix composer version to lastest 1.x
+        - composer install -q
+    after_script:
+        - ls -la
+    cache:
+        key:
+            files:
+                - composer.lock
+        paths:
+            - vendor
+            - app/etc
+            - generated
+            - dev/tests/unit
+            - app/autoload.php
+            - app/bootstrap.php
+            - app/functions.php
+            - setup
+            - lib
+    artifacts:
+        paths:
+            - vendor
+            - app/etc
+            - generated
+            - dev/tests/unit
+            - app/autoload.php
+            - app/bootstrap.php
+            - app/functions.php
+            - setup
+            - lib
+            - composer.lock
+        expire_in: 1 week
+    except:
+        refs:
+            - tags
+
+# -------------------- Code Check ------------------------
+# Code analysis based on Spbuilder tool
+# Current configuration available on .spbuilder.yml and .smileanalyser.yml
+spbuilder-analyse:
+    tags: [php71]
+    stage: test
+    before_script:
+        - *ssh_provision
+    script:
+        - scl enable rh-php72 'vendor/smile/spbuilder/bin/spbuilder analyze --ignore-tool=visualization'
+        - test $(grep '<error ' build/logs/checkstyle.xml | wc -l) -le "$PHPCS_ALLOWED_ERROR" || (echo "Checking PHPCS failed, $(grep '<error ' build/logs/checkstyle.xml | wc -l) exceed $PHPCS_ALLOWED_ERROR errors" && false)
+        - test $(grep '<violation ' build/logs/pmd.xml | wc -l) -le "$PHPMD_ALLOWED_ERROR" || (echo "Checking PHPMD failed, $(grep '<violation ' build/logs/pmd.xml | wc -l) exceed $PHPMD_ALLOWED_ERROR errors" && false)
+        - test $(grep '<error ' build/logs/smileanalyser.xml | wc -l) -le "$SMILEANALYSER_ALLOWED_ERROR" || (echo "Checking SmileAnalyser failed, $(grep '<error ' build/logs/smileanalyser.xml | wc -l) exceed $SMILEANALYSER_ALLOWED_ERROR errors" && false)
+    after_script:
+        - 'curl --output checkstyle-valid.xml --header "PRIVATE-TOKEN: $GITLAB_USER_TOKEN" "https://git.smile.fr/api/v4/projects/6095/jobs/artifacts/develop/raw/build/logs/checkstyle.xml?job=spbuilder-analyse"'
+        - 'curl --output pmd-valid.xml --header "PRIVATE-TOKEN: $GITLAB_USER_TOKEN" "https://git.smile.fr/api/v4/projects/6095/jobs/artifacts/develop/raw/build/logs/pmd.xml?job=spbuilder-analyse"'
+        - 'curl --output smileanalyser-valid.xml --header "PRIVATE-TOKEN: $GITLAB_USER_TOKEN" "https://git.smile.fr/api/v4/projects/6095/jobs/artifacts/develop/raw/build/logs/smileanalyser.xml?job=spbuilder-analyse"'
+        - diff -uB pmd-valid.xml build/logs/pmd.xml || true
+        - diff -uB smileanalyser-valid.xml build/logs/smileanalyser.xml || true
+        - diff -uB checkstyle-valid.xml build/logs/checkstyle.xml || true
+    artifacts:
+        paths:
+            - build/logs/
+        expire_in: 1 week
+    needs:
+        - job: composer-build
+          artifacts: true
+    except:
+        refs:
+            - tags
+
+
+# ---------------- Merge request analysis ----------------
+# This is used when a merge request is submitted to check the code quality based on the Quality gate defined on
+# Sonarqube and with the specific rules declared
+sonar-mr:
+    image:
+        name: newtmitch/sonar-scanner:3.2-alpine
+        entrypoint: ['']
+    stage: test
+    variables:
+        SONAR_ANALYSIS_MODE: 'preview'
+        SONAR_SCANNER_OPTS: '-Xmx2G'
+    tags:
+        - docker-accor
+    script:
+        - "sonar-scanner \
+            -Dsonar.host.url=https://sonar.pp.cicd.aws.smile.fr \
+            -Dsonar.projectKey=accor \
+            -Dsonar.projectBaseDir=. \
+            -Dsonar.sources=app/code/Accor/ \
+            -Dsonar.sourceEncoding=UTF-8 \
+            -Dsonar.login=$SONAR_LOGIN \
+            -Dsonar.analysis.mode=$SONAR_ANALYSIS_MODE \
+            -Dsonar.gitlab.api_version=v4 \
+            -Dsonar.gitlab.commit_sha=$CI_COMMIT_SHA \
+            -Dsonar.gitlab.ref_name=$CI_COMMIT_REF_NAME \
+            -Dsonar.gitlab.user_token=$GITLAB_USER_TOKEN \
+            -Dsonar.gitlab.project_id=$CI_PROJECT_ID \
+            -Dsonar.gitlab.only_issue_from_commit_line=true \
+            -Dsonar.gitlab.max_major_issues_gate=0 \
+            -Dsonar.gitlab.max_minor_issues_gate=0 \
+            "
+    except:
+        refs:
+            - tags
+
+# ---------------------- Unit tests (Magento and Accor) ----------------------
+# Simple unit test check during merge requests.after_script
+# - xdebug is deactivated to reduce the execution time
+# - no code coverage either
+unit_test_all:
+    stage: test
+    image: meanbee/magento:7.0-cli
+    tags:
+        - docker-accor
+    before_script:
+        - apt update && apt upgrade -y
+        - apt install -y wget zip unzip
+        - docker-php-ext-install bcmath
+        - *ssh_provision
+        - find /usr/local/etc/php/conf.d/ -type f -name '*xdebug*.ini' -exec rm -f {} \;
+    script:
+        - vendor/phpunit/phpunit/phpunit -d memory_limit=2048M -c $PHPUNIT_CONFIG_ALL
+    needs:
+        -   job: composer-build
+            artifacts: true
+    except:
+        refs:
+            - tags
+
+# ---------------------- Unit tests coverage for Magento native code ----------------------
+# Advanced unit test with code coverage generation. This job is launched by a scheduled pipeline in gitlab
+unit_tests_coverage_magento:
+    stage: test
+    image: meanbee/magento:7.0-cli
+    tags:
+        - docker-accor
+    before_script:
+        - apt update && apt upgrade -y
+        - apt install -y wget zip unzip
+        - docker-php-ext-install bcmath
+        - *ssh_provision
+    script:
+        - vendor/phpunit/phpunit/phpunit -d memory_limit=2048M -c $PHPUNIT_CONFIG_MAGENTO --colors=never
+    after_script:
+        # Used for code coverage parsing see https://docs.gitlab.com/ee/ci/pipelines/settings.html#test-coverage-parsing
+        - cat $PHPUNIT_REPORT_FOLDER/$PHPUNIT_REPORT_TXT_MAGENTO
+    artifacts:
+        when: always
+        expire_in: 1 week
+        paths:
+            - 'phpunit/coverage/'
+    only:
+        - schedules
+    allow_failure: true
+    needs:
+        -   job: composer-build
+            artifacts: true
+
+# ---------------------- Unit tests coverage for ACCOR specific CODE ----------------------
+# Advanced unit test with code coverage generation. This job is launched by a scheduled pipeline in gitlab
+unit_tests_coverage_accor:
+    stage: test
+    image: meanbee/magento:7.0-cli
+    tags:
+        - docker-accor
+    before_script:
+        - apt update && apt upgrade -y > install.log
+        - apt install -y wget > install.log
+        - docker-php-ext-install bcmath > install.log
+        - *ssh_provision
+        - rm -f $PHPUNIT_REPORT_FOLDER/*
+    script:
+        - echo "vendor/phpunit/phpunit/phpunit -d memory_limit=2048M -c $PHPUNIT_CONFIG_ACCOR --colors=never"
+        - vendor/phpunit/phpunit/phpunit -d memory_limit=2048M -c $PHPUNIT_CONFIG_ACCOR --colors=never
+        - python ci/script/path-phpunit-report.py $PHPUNIT_REPORT_FOLDER/$PHPUNIT_REPORT_FILENAME_ACCOR # Fixes the php unit report file format
+    after_script:
+        # Used for code coverage parsing see https://docs.gitlab.com/ee/ci/pipelines/settings.html#test-coverage-parsing
+        - cat $PHPUNIT_REPORT_FOLDER/$PHPUNIT_REPORT_TXT_ACCOR
+    artifacts:
+        when: always
+        expire_in: 1 week
+        paths:
+            - 'phpunit/coverage/'
+    needs:
+        -   job: composer-build
+            artifacts: true
+    except:
+        refs:
+            - tags
+
+# ---------------- Full project analysis -----------------
+# Sonarqube analysis with code coverage integration. Results are published in Sonarqube
+# This job is launched by a scheduled pipeline in gitlab
+# Code coverage report only includes Accor dedicated code coverage
+sonar_analyse:
+    image:
+        name: newtmitch/sonar-scanner:3.2-alpine
+        entrypoint: ['']
+    tags:
+        - docker-accor
+    stage: sonarqube-analysis
+    dependencies:
+        - unit_tests_coverage_accor
+    needs:
+        - unit_tests_coverage_accor
+        -   job: composer-build
+            artifacts: true
+    variables:
+        # To Avoid Shallow clone and analysis error from Sonar
+        GIT_DEPTH: 0
+        SONAR_ANALYSIS_MODE: 'publish'
+    before_script:
+        - ls -la $PHPUNIT_REPORT_FOLDER
+    script:
+        - "sonar-scanner \
+            -Dsonar.host.url=https://sonar.pp.cicd.aws.smile.fr \
+            -Dsonar.php.tests.reportPath=$PHPUNIT_REPORT_FOLDER/$PHPUNIT_REPORT_FILENAME_ACCOR \
+            -Dsonar.php.coverage.reportPaths=$PHPUNIT_REPORT_FOLDER/$PHPUNIT_REPORT_CLOVER_ACCOR \
+            -Dsonar.projectBaseDir=. \
+            -Dsonar.sources=app/code/Accor/ \
+            -Dsonar.projectKey=accor \
+            -Dsonar.login=$SONAR_LOGIN \
+            -Dsonar.sourceEncoding=UTF-8 \
+            -Dsonar.analysis.mode=$SONAR_ANALYSIS_MODE \
+            -Dsonar.gitlab.commit_sha=$CI_COMMIT_SHA \
+            -Dsonar.gitlab.ref_name=$CI_COMMIT_SHORT_SHA \
+            -Dsonar.gitlab.project_id=$CI_PROJECT_ID \
+            -Dsonar.gitlab.user_token=$GITLAB_USER_TOKEN \
+            -Dsonar.gitlab.api_version=v4"
+    only:
+        - schedules
+
+######################################################################
+#              Continuous deployement part (WIP)                     #
+######################################################################
+
+# ------------------- Package TEST ON DOCKER ACCOR -------------------
+# We should be able to contact SMILE packagist ???
+
+#package:
+#    image: meanbee/magento:7.1-cli
+#    stage: package
+#    tags:
+#        - docker-accor
+#    variables:
+#        VERSION_NAME: '${CI_COMMIT_TAG}'
+#    before_script:
+#        - 'apt-get update -yqq'
+#        - 'apt-get install -yqq openssh-client python git python-pip libldap2-dev libsasl2-dev wget zip unzip awscli'
+#        - *ssh_provision
+#        - *composer
+#        - *get_pip
+#    script:
+#        - 'echo "package version $VERSION_NAME"'
+#        - bin/spbuilder package --no-interaction --force-tag $VERSION_NAME
+#        - aws s3 ls s3://newaccorshop-releases/magento/inte01/
+#        - aws s3 cp build/dist/accor-magento-$VERSION_NAME.tar.gz s3://newaccorshop-releases/magento/inte01/
+#
+#    artifacts:
+#        name: '$VERSION_NAME'
+#        paths:
+#            - 'build/dist/'
+#    only:
+#        refs:
+#            - tags
+#        variables:
+#            - $CI_PROJECT_PATH == 'Accor/magento'
+#    allow_failure: false
+#    # We want it to be done everytime to analyse Unit-test results
+#    when: manual
+
+# ------------------- Deploy -------------------
+# Debug me easy with the fast tag creation:
+# export GIT_TAG_NOW="magento-inte-$(date +'%Y%m%d-%H%M%S')" && git tag $GIT_TAG_NOW && git push origin $GIT_TAG_NOW
+
+deploy_inte:
+    tags:
+        - accor-delivery-forge
+    stage: deploy
+#    dependencies:
+#        - package
+    variables:
+        DEPLOY_ENV: in01
+    before_script:
+        - *deploy_provision
+        - *get_pip
+        - pip install awscli --upgrade --user
+        - python ci/script/script.py 57QDBPOMTG4OBZ7WHJAMRGEPFPMAO275FVCLCEQD3QQAN2CSZ3DQGSAVTBPRTVAG | aws-mfa --profile master
+        - "export S3_PACKAGE=$(aws s3 ls s3://newaccorshop-releases/magento/inte01/ --profile accor-prod | sort | tail -n 2 | grep accor-magento | cut -d '-' -f 6- | tail -n 1)"
+        - 'git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@git.smile.fr/smile-outsourcing/client-architectures/accor-newaccorshop'
+        - *ssh_provision
+        - cd accor-newaccorshop/ansible/magento2/
+        - git checkout ${DEPLOY_ENV}
+        - git pull
+    script:
+        - echo "We are about to deliver ${S3_PACKAGE} on ${DEPLOY_ENV}"
+        #- './scripts/deploy.sh ${DEPLOY_ENV}.aws_ec2.yml -p ${s3_package} -s'
+        - ./scripts/cache-clean.sh ${DEPLOY_ENV}.aws_ec2.yml
+    after_script:
+        - php ci/script/continuous-delivery-notification.php
+    allow_failure: true
+    only:
+        refs:
+            - tags
+            - inte
+        variables:
+            # magento-inte-19901113-010112
+            - $CI_COMMIT_TAG =~ /magento-inte-[0-9]{8}-[0-9]{6}/
+    when: manual
