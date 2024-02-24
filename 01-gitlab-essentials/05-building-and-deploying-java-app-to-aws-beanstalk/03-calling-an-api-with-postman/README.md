@@ -150,6 +150,7 @@ Status: 200 OK
 ### Additional Endpoints
 
 1. **Statistics**: Provides data such as the average age of the vehicles.
+
 - Method: GET
 - Endpoint: `{{baseUrl}}/statistics/age`
 - Response Example:
@@ -162,6 +163,7 @@ Status: 200 OK
 ```
 
 2. **Health Check**: Indicates if the server is up and running.
+
 - Method: GET
 - Endpoint: `{{baseUrl}}/actuator/health`
 - Response Example:
