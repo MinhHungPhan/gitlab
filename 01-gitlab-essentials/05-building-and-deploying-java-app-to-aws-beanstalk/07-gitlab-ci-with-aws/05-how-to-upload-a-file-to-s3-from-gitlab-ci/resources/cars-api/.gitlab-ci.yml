@@ -21,3 +21,12 @@ smoke test:
     - java -jar ./build/libs/cars-api.jar &
     - sleep 30
     - curl http://localhost:5000/actuator/health | grep "UP"
+
+deploy:
+  stage: deploy
+  image:
+    name: amazon/awscli
+    entrypoint: [""]
+  script:
+    - aws configure set region us-east-1
+    - aws s3 cp ./build/libs/cars-api.jar s3://$S3_BUCKET/cars-api.jar
