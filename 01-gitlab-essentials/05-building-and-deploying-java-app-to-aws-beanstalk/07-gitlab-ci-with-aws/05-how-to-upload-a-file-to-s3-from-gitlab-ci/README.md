@@ -172,3 +172,4 @@ Integrating GitLab CI with AWS S3 streamlines the process of managing and deploy
 - [AWS S3 Official Documentation](https://aws.amazon.com/s3/)
 - [GitLab CI/CD Variables Documentation](https://docs.gitlab.com/ee/user/group/)
 - [AWS CLI S3 Commands](https://docs.aws.amazon.com/cli/latest/reference/s3/)
+- [amazon/aws-cli](https://hub.docker.com/r/amazon/aws-cli/tags)
