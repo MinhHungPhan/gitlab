@@ -1,0 +1,32 @@
+stages:
+  - build
+  - test
+  - deploy
+
+build:
+  stage: build
+  image: openjdk:12-alpine
+  script:
+    - ./gradlew build
+  artifacts:
+    paths:
+      - ./build/libs/
+
+smoke test:
+  stage: test
+  image: openjdk:12-alpine
+  before_script:
+    - apk --no-cache add curl
+  script:
+    - java -jar ./build/libs/cars-api.jar &
+    - sleep 30
+    - curl http://localhost:5000/actuator/health | grep "UP"
+
+deploy:
+  stage: deploy
+  image:
+    name: amazon/aws-cli
+    entrypoint: [""]
+  script:
+    - aws configure set region us-east-1
+    - aws s3 cp ./build/libs/cars-api.jar s3://$S3_BUCKET/cars-api.jar
