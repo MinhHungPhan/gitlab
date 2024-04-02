@@ -12,6 +12,7 @@ build:
   image: openjdk:12-alpine
   script:
     - ./gradlew build
+    - mv ./build/libs/cars-api.jar ./build/libs/$ARTIFACT_NAME
   artifacts:
     paths:
       - ./build/libs/
