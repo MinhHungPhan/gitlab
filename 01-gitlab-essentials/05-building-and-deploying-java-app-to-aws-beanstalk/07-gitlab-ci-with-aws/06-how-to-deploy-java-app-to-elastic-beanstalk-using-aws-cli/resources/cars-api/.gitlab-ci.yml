@@ -1,5 +1,6 @@
 variables:
   ARTIFACT_NAME: cars-api-v$CI_PIPELINE_IID.jar
+  APP_NAME: cars-api
 
 stages:
   - build
