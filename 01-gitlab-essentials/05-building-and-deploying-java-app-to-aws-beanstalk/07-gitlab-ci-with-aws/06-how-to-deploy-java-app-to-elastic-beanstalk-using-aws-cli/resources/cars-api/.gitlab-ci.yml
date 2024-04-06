@@ -23,7 +23,7 @@ smoke test:
   before_script:
     - apk --no-cache add curl
   script:
-    - java -jar ./build/libs/ARTIFACT_NAME &
+    - java -jar ./build/libs/$ARTIFACT_NAME &
     - sleep 30
     - curl http://localhost:5000/actuator/health | grep "UP"
 
