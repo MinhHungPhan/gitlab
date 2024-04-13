@@ -18,6 +18,7 @@ Welcome to this comprehensive guide on deploying a Java application to AWS Elast
   - [Creating an Application Version](#creating-an-application-version)
   - [Updating the Elastic Beanstalk Environment](#updating-the-elastic-beanstalk-environment)
 - [Granting Elastic Beanstalk Admin Access to 'gitlabci' User](#granting-elastic-beanstalk-admin-access-to-gitlabci-user)
+- [Managing Elastic Beanstalk Instance Profiles](#managing-elastic-beanstalk-instance-profiles)
 - [Best Practices](#best-practices)
 - [Key Takeaways](#key-takeaways)
 - [Conclusion](#conclusion)
@@ -163,43 +164,109 @@ This command instructs AWS Elastic Beanstalk to deploy the specified application
 
 ## Granting Elastic Beanstalk Admin Access to 'gitlabci' User
 
-### Step 1: Sign in to AWS Management Console
+1. **Sign in to AWS Management Console**:
 
 - Navigate to the AWS Management Console and log in with an account that has administrative access.
 
-### Step 2: Access IAM Service
+2. **Step 2: Access IAM Service**:
 
 - In the AWS Management Console, find and click on the "Services" menu, then select "IAM" under the Security, Identity, & Compliance section.
 
-### Step 3: Users List
+3. **Users List**:
 
 - Within the IAM dashboard, click on "Users" in the left-hand sidebar to view the list of IAM users.
 
-### Step 4: Find the User
+4. **Find the User**:
 
 - Search for the user "gitlabci" in the search bar.
 
-### Step 5: Open User Details
+5. **Open User Details**:
 
 - Click on the username "gitlabci" to open the user details page.
 
-### Step 6: Add Permissions
+6. **Add Permissions**:
 
 - In the user details page, click on the "Add permissions" button.
 
-### Step 7: Attach Existing Policies Directly
+7. **Attach Existing Policies Directly**:
 
 - Choose "Attach existing policies directly" from the options presented.
 - In the search box, type "AdministratorAccess-AWSElasticBeanstalk" to find the policy. If you're specifically aiming for broad permissions, you can use "AdministratorAccess". However, be cautious as this grants extensive permissions across your AWS account.
 
-### Step 8: Select the Policy
+8. **Select the Policy**:
 
 - Once you find the "AdministratorAccess-AWSElasticBeanstalk" policy (or "AdministratorAccess" if you're using that), check the box next to it to select it.
 
-### Step 9: Review and Confirm
+9. **Review and Confirm**:
 
 - Review the permissions to ensure that the correct policy is being attached to the user "gitlabci".
 - Click the "Next: Review" button, then click "Add permissions" to confirm and apply the policy to the user.
+
+## Managing Elastic Beanstalk Instance Profiles
+
+Managing instance profiles in AWS Elastic Beanstalk is crucial for ensuring that your EC2 instances have the necessary permissions to operate effectively. Below, you'll find detailed instructions on creating, verifying, and updating instance profiles.
+
+### Creating an Instance Profile
+
+An instance profile acts as a wrapper around an IAM role, allowing EC2 instances to assume that role. You can create instance profiles tailored to specific applications or limit them if certain services are not utilized.
+
+1. **Navigate to the IAM Console**:
+
+- Open the [IAM console](https://console.aws.amazon.com/iam/).
+- Go to the **Roles** page.
+
+2. **Create a New Role**:
+
+- Click **Create role**.
+- For the trusted entity type, select **AWS service**.
+- For the use case, choose **EC2** to allow EC2 instances to assume this role.
+
+3. **Attach Policies**:
+
+- Proceed to **Next** and attach the necessary Elastic Beanstalk managed policies. Additionally, attach any other policies that your application requires for operation.
+
+4. **Finalize Role Creation**:
+
+- After attaching policies, click **Next**.
+- Enter a name for the role.
+- Optionally, add tags to the role.
+- Click **Create role** to finalize.
+
+### Verifying Instance Profile Permissions
+
+It's important to periodically verify the permissions associated with your instance profiles to ensure they meet current application requirements.
+
+1. **Access the IAM Console**:
+
+- Open the IAM console and navigate to the **Roles** page.
+
+2. **Review Role Permissions**:
+
+- Select the role used as your EC2 instance profile.
+- Click on the **Permissions** tab to review the policies attached to the role.
+- Click on individual policies to view the specific permissions each policy grants.
+
+### Updating an Out-of-Date Instance Profile
+
+If your default instance profile is missing required permissions, updating it to include necessary policies is essential.
+
+1. **Open the IAM Console**:
+
+- Go to the IAM console and access the **Roles** page.
+
+2. **Modify Role Permissions**:
+
+- Select the role that serves as your EC2 instance profile.
+- Navigate to the **Permissions** tab and click **Attach policies**.
+
+3. **Attach Required Policies**:
+
+- Use the search bar to filter by typing `AWSElasticBeanstalk`.
+- Select the necessary policies for your environment, such as:
+    - `AWSElasticBeanstalkWebTier`
+    - `AWSElasticBeanstalkWorkerTier`
+    - `AWSElasticBeanstalkMulticontainerDocker`
+- Click **Attach policy** to apply these to your role.
 
 ## Best Practices
 
@@ -220,6 +287,8 @@ Deploying your Java application to AWS Elastic Beanstalk using AWS CLI not only 
 ## References
 
 - [GitLab CI Variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)
+- [Creating Elastic Beanstalk environments with the AWS CLI](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environments-create-awscli.html)
+- [Managing Elastic Beanstalk instance profiles](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/iam-instanceprofile.html)
 - [AWS CLI Elastic Beanstalk](https://docs.aws.amazon.com/cli/latest/reference/elasticbeanstalk/)
 - [AWS CLI Create Application Version](https://docs.aws.amazon.com/cli/latest/reference/elasticbeanstalk/create-application-version.html)
 - [AWS CLI Update Environment](https://docs.aws.amazon.com/cli/latest/reference/elasticbeanstalk/update-environment.html)
