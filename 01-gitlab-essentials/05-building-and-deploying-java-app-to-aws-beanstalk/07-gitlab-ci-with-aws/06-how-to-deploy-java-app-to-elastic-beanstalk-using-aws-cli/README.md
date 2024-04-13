@@ -17,6 +17,7 @@ Welcome to this comprehensive guide on deploying a Java application to AWS Elast
 - [Deploying to AWS Elastic Beanstalk](#deploying-to-aws-elastic-beanstalk)
   - [Creating an Application Version](#creating-an-application-version)
   - [Updating the Elastic Beanstalk Environment](#updating-the-elastic-beanstalk-environment)
+- [Granting Elastic Beanstalk Admin Access to 'gitlabci' User](#granting-elastic-beanstalk-admin-access-to-gitlabci-user)
 - [Best Practices](#best-practices)
 - [Key Takeaways](#key-takeaways)
 - [Conclusion](#conclusion)
@@ -84,7 +85,7 @@ build:
     - mv ./build/libs/cars-api.jar ./build/libs/$ARTIFACT_NAME
   artifacts:
     paths:
-      - ./build/libs/$ARTIFACT_NAME
+      - ./build/libs/
 ```
 
 ### Smoke Test Stage
@@ -111,7 +112,7 @@ In the deploy stage, when uploading your artifact to AWS S3 and creating a new a
 deploy:
   stage: deploy
   image:
-    name: banst/awscli
+    name: amazon/aws-cli
     entrypoint: [""]
   script:
     - aws configure set region us-east-1
@@ -130,9 +131,9 @@ An application version in AWS Elastic Beanstalk represents a specific iteration 
 
 - **Command**: `aws elasticbeanstalk create-application-version`
 - **Key Parameters**:
-  - `--application-name`: The name of your Elastic Beanstalk application (`APP_NAME`).
-  - `--version-label`: A unique identifier for this version, often tied to the build or release ID.
-  - `--source-bundle`: Specifies the location of your application code in Amazon S3, consisting of the S3 bucket name and the path to the ZIP file or WAR file in the bucket.
+    - `--application-name`: The name of your Elastic Beanstalk application (`APP_NAME`).
+    - `--version-label`: A unique identifier for this version, often tied to the build or release ID.
+    - `--source-bundle`: Specifies the location of your application code in Amazon S3, consisting of the S3 bucket name and the path to the ZIP file or WAR file in the bucket.
 
 **Example**:
 
@@ -160,6 +161,46 @@ aws elasticbeanstalk update-environment --application-name $APP_NAME --environme
 
 This command instructs AWS Elastic Beanstalk to deploy the specified application version in the specified environment. It triggers the process of stopping the current application (if any), extracting the new version, and starting the new application version, along with any associated environment configuration changes.
 
+## Granting Elastic Beanstalk Admin Access to 'gitlabci' User
+
+### Step 1: Sign in to AWS Management Console
+
+- Navigate to the AWS Management Console and log in with an account that has administrative access.
+
+### Step 2: Access IAM Service
+
+- In the AWS Management Console, find and click on the "Services" menu, then select "IAM" under the Security, Identity, & Compliance section.
+
+### Step 3: Users List
+
+- Within the IAM dashboard, click on "Users" in the left-hand sidebar to view the list of IAM users.
+
+### Step 4: Find the User
+
+- Search for the user "gitlabci" in the search bar.
+
+### Step 5: Open User Details
+
+- Click on the username "gitlabci" to open the user details page.
+
+### Step 6: Add Permissions
+
+- In the user details page, click on the "Add permissions" button.
+
+### Step 7: Attach Existing Policies Directly
+
+- Choose "Attach existing policies directly" from the options presented.
+- In the search box, type "AdministratorAccess-AWSElasticBeanstalk" to find the policy. If you're specifically aiming for broad permissions, you can use "AdministratorAccess". However, be cautious as this grants extensive permissions across your AWS account.
+
+### Step 8: Select the Policy
+
+- Once you find the "AdministratorAccess-AWSElasticBeanstalk" policy (or "AdministratorAccess" if you're using that), check the box next to it to select it.
+
+### Step 9: Review and Confirm
+
+- Review the permissions to ensure that the correct policy is being attached to the user "gitlabci".
+- Click the "Next: Review" button, then click "Add permissions" to confirm and apply the policy to the user.
+
 ## Best Practices
 
 - Use environment-specific configurations to manage different stages of your application lifecycle efficiently.
@@ -182,3 +223,5 @@ Deploying your Java application to AWS Elastic Beanstalk using AWS CLI not only 
 - [AWS CLI Elastic Beanstalk](https://docs.aws.amazon.com/cli/latest/reference/elasticbeanstalk/)
 - [AWS CLI Create Application Version](https://docs.aws.amazon.com/cli/latest/reference/elasticbeanstalk/create-application-version.html)
 - [AWS CLI Update Environment](https://docs.aws.amazon.com/cli/latest/reference/elasticbeanstalk/update-environment.html)
+- [list-available-solution-stacks](https://docs.aws.amazon.com/cli/latest/reference/elasticbeanstalk/list-available-solution-stacks.html)
+- [Java SE platform history](https://docs.aws.amazon.com/elasticbeanstalk/latest/platforms/platform-history-javase.html)
