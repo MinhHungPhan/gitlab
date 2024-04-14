@@ -228,7 +228,7 @@ An instance profile acts as a wrapper around an IAM role, allowing EC2 instances
 4. **Finalize Role Creation**:
 
 - After attaching policies, click **Next**.
-- Enter a name for the role.
+- Enter a name for the role, such as `aws-elasticbeanstalk-ec2-role`.
 - Optionally, add tags to the role.
 - Click **Create role** to finalize.
 
