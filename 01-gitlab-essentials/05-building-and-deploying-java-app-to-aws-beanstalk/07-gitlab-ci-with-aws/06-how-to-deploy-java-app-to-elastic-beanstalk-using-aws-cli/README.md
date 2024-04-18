@@ -294,3 +294,4 @@ Deploying your Java application to AWS Elastic Beanstalk using AWS CLI not only 
 - [AWS CLI Update Environment](https://docs.aws.amazon.com/cli/latest/reference/elasticbeanstalk/update-environment.html)
 - [list-available-solution-stacks](https://docs.aws.amazon.com/cli/latest/reference/elasticbeanstalk/list-available-solution-stacks.html)
 - [Java SE platform history](https://docs.aws.amazon.com/elasticbeanstalk/latest/platforms/platform-history-javase.html)
+- [CI/CD YAML syntax reference - needs](https://docs.gitlab.com/ee/ci/yaml/#needs)
