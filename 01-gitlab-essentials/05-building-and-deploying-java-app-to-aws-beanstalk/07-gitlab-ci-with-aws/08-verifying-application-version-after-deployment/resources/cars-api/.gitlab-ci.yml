@@ -35,6 +35,9 @@ deploy:
   image:
     name: amazon/aws-cli
     entrypoint: [""]
+  before_script:
+    - apk --no-cache add curl
+    - apk --no-cache add jq
   script:
     - aws configure set region us-east-1
     - aws s3 cp ./build/libs/$ARTIFACT_NAME s3://$S3_BUCKET/$ARTIFACT_NAME
