@@ -30,6 +30,16 @@ smoke test:
     - sleep 30
     - curl http://localhost:5000/actuator/health | grep "UP"
 
+code quality:
+  stage: test
+  image: openjdk:12-alpine
+  script:
+    - ./gradlew pmdMain pmdTest
+  artifacts:
+    when: always
+    paths:
+      - ./build/reports/pmd
+
 deploy:
   stage: deploy
   image:
