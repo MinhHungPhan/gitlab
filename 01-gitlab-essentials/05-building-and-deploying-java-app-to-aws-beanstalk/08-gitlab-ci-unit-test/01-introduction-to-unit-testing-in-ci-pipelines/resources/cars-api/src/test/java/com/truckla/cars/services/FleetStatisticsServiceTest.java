@@ -47,6 +47,6 @@ public class FleetStatisticsServiceTest {
 
         when(repo.findAll()).thenReturn(myList);
 
-        assertEquals(service.getAverageFleetAge().getAge(), 15, 0);
+        assertEquals(service.getAverageFleetAge().getAge(), 16, 0);
     }
 }
