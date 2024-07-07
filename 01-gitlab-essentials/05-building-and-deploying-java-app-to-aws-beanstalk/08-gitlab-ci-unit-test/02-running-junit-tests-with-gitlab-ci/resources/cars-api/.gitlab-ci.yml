@@ -40,6 +40,12 @@ code quality:
     paths:
       - ./build/reports/pmd
 
+unit tests:
+  stage: test
+  image: openjdk:12-alpine
+  script:
+    - ./gradlew test
+
 deploy:
   stage: deploy
   image:
