@@ -45,6 +45,12 @@ unit tests:
   image: openjdk:12-alpine
   script:
     - ./gradlew test
+  artifacts:
+    when: always
+    paths:
+      - build/reports/tests
+    reports:
+      junit: build/test-results/test/*.xml
 
 deploy:
   stage: deploy
