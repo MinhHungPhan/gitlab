@@ -6,6 +6,7 @@ stages:
   - build
   - test
   - deploy
+  - post deploy
 
 build:
   stage: build
@@ -68,3 +69,18 @@ deploy:
     - sleep 45
     - curl http://$CNAME/actuator/info | grep $CI_PIPELINE_IID
     - curl http://$CNAME/actuator/health | grep "UP"
+
+api testing:
+  stage: post deploy
+  image:
+    name: postman/newman
+    entrypoint: [""]
+  script:
+    - newman --version
+    - newman run "Cars-API.postman_collection.json" -e "Production.postman_environment.json" --reporters cli,htmlextra,junit --reporter-htmlextra-export "newman/report.html"
+  artifacts:
+    when: always
+    paths:
+      - newman
+    reports:
+      junit: newman/report.xml
