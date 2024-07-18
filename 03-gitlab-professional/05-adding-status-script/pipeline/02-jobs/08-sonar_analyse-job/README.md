@@ -117,7 +117,7 @@ sonar_analyse:
             -Dsonar.gitlab.project_id=$CI_PROJECT_ID \
             -Dsonar.gitlab.user_token=$GITLAB_USER_TOKEN \
             -Dsonar.gitlab.api_version=v4"
-    only:git 
+    only:
         - schedules
 ```
 
