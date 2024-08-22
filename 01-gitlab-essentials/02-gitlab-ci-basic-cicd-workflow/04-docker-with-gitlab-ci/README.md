@@ -41,6 +41,16 @@ Virtual machines are commonly used for various purposes, such as testing softwar
 
 ![GitLab](images/01-virtual-machine.png)
 
+### Docker Container
+
+A Docker container is a lightweight and isolated runtime environment that encapsulates an application and its dependencies. It is created from a Docker image, which contains all the necessary files, libraries, and configurations required to run the application.
+
+Unlike a virtual machine, a Docker container shares the host operating system's kernel, making it more efficient and lightweight. Containers can be easily deployed and scaled, providing consistent and reproducible environments for running applications.
+
+Docker containers offer portability, allowing applications to run consistently across different environments, from development to production. They also enable easy management and versioning of applications, making it simple to update and roll back changes.
+
+![GitLab](images/02-docker-container.png)
+
 ## Docker and Continuous Integration
 
 In a CI environment, using Docker offers significant benefits. Traditionally, a CI server needs to have all required tools and packages installed, which can become problematic. For example, if different tools need different versions of Node.js, you cannot install two versions of Node.js on the same server.
