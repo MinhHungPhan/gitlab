@@ -33,6 +33,14 @@ Docker makes it easier to deploy applications. It allows developers to package a
 
 Docker can be viewed as a lightweight alternative to traditional virtual machines. Like a VM, a Docker container encapsulates an application and its dependencies. However, while a VM includes a full copy of an operating system, a Docker container shares the OS kernel with other containers, making it much more efficient.
 
+### Virtual Machine
+
+A virtual machine (VM) is a software emulation of a physical computer. It allows you to run multiple operating systems on a single physical machine, providing isolation and flexibility. Each VM has its own virtual hardware, including CPU, memory, storage, and network interfaces.
+
+Virtual machines are commonly used for various purposes, such as testing software on different operating systems, running legacy applications, or creating development environments. They provide a way to abstract the underlying hardware and create a consistent environment for applications to run.
+
+![GitLab](images/01-virtual-machine.png)
+
 ## Docker and Continuous Integration
 
 In a CI environment, using Docker offers significant benefits. Traditionally, a CI server needs to have all required tools and packages installed, which can become problematic. For example, if different tools need different versions of Node.js, you cannot install two versions of Node.js on the same server.
