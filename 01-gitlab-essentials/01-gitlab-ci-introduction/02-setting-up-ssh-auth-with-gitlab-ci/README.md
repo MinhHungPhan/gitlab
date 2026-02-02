@@ -21,11 +21,11 @@ This lesson guides you through the process of setting up SSH authentication with
 
 4. **Generate SSH Key**: To generate a new SSH key, open your terminal (Bash for Windows users), and enter the following command:
 
-    ```
-    ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
-    ```
+```sh
+ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
+```
 
-    This command requests an RSA key with a size of 4096 bits. Replace `"your_email@example.com"` with your GitLab email address.
+This command requests an RSA key with a size of 4096 bits. Replace `"your_email@example.com"` with your GitLab email address.
 
 5. **Store the SSH Key**: When prompted to "Enter a file in which to save the key," press `Enter` to accept the default location. 
 
@@ -33,11 +33,11 @@ This lesson guides you through the process of setting up SSH authentication with
 
 7. **Export the Public Key**: After creating the SSH key, you need to share your public key with GitLab. Run the following command to display your public key:
 
-    ```
-    cat ~/.ssh/id_rsa.pub
-    ```
+```sh
+cat ~/.ssh/id_rsa.pub
+```
 
-    **Important**: Ensure you include `.pub` at the end. Without this, you will display your private key, which should remain secret.
+**Important**: Ensure you include `.pub` at the end. Without this, you will display your private key, which should remain secret.
 
 8. **Copy the Public Key**: The output will be a long string of text, which is your public key. Copy this entire string.
 
